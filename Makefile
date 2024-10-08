@@ -13,12 +13,20 @@ $(OUTDIR):
 debug: ## Build a debug version
 	go build -o open-go-shorten *.go
 
-prod: $(OUTDIR) ## Build a production version
-	CGO_ENABLED=0 go build -ldflags "-s -w -buildid= -X 'main.version=$(version)' -trimpath -o $(OUTDIR)/open-go-shorten main.go
+clean-build: $(OUTDIR) ## Clean the build directory
 
-release: prod ## Generate a production release
-	tar -cjf $(OUTDIR)/../open-go-shorten-$(VERSION).tar.bz2 -C $(OUTDIR) .
-	rm -fr $(OUTDIR) || true
+build-linux: ## Build release version for GNU/Linux
+	@GOOS="linux" GOARCH="amd64" CGO_ENABLED=0 go build -ldflags "-s -w -buildid= -X 'main.version=$(VERSION)'" -trimpath -o $(OUTDIR)/open-go-shorten-linux-amd64 main.go
+	@GOOS="linux" GOARCH="arm64" CGO_ENABLED=0 go build -ldflags "-s -w -buildid= -X 'main.version=$(VERSION)'" -trimpath -o $(OUTDIR)/open-go-shorten-linux-arm64 main.go
+
+build-darwin: ## Build release version for MacOS
+	@GOOS="darwin" GOARCH="amd64" CGO_ENABLED=0 go build -ldflags "-s -w -buildid= -X 'main.version=$(VERSION)'" -trimpath -o $(OUTDIR)/open-go-shorten-darwin-amd64 main.go
+	@GOOS="darwin" GOARCH="arm64" CGO_ENABLED=0 go build -ldflags "-s -w -buildid= -X 'main.version=$(VERSION)'" -trimpath -o $(OUTDIR)/open-go-shorten-darwin-arm64 main.go
+
+build-windows: ## Build release version for MacOS
+	@GOOS="windows" GOARCH="amd64" CGO_ENABLED=0 go build -ldflags "-s -w -buildid= -X 'main.version=$(VERSION)'" -trimpath -o $(OUTDIR)/open-go-shorten-windows-amd64.exe main.go
+
+release: clean-build build-linux build-darwin build-windows ## Build the release version
 
 .PHONY: help
 .DEFAULT_GOAL := help
