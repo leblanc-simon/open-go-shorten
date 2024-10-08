@@ -1,0 +1,104 @@
+body {
+    font-family: Ubuntu, Arial, sans-serif;
+    color: var(--primary-color);
+    background-color: var(--background-color);
+}
+
+.hidden {
+    display: none;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    padding: var(--default-spacing);
+}
+
+h1 {
+    flex: 1;
+    font-size: var(--big-size);
+}
+
+h2 {
+    font-size: var(--medium-size);
+}
+
+input, button {
+    padding: calc(var(--default-spacing) / 2);
+    border-radius: var(--default-spacing);
+    border: 1px dashed;
+    background-color: var(--primary-color);
+}
+
+button:hover, button:active {
+    border: 1px solid;
+    cursor: pointer;
+}
+
+a {
+    color: inherit;
+}
+
+.notloading {
+    display: none;
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    padding: var(--default-spacing);
+
+    article {
+        display: flex;
+        flex-direction: column;
+        padding: var(--default-spacing);
+        margin-bottom: calc(var(--default-spacing) * 2);
+        align-items: center;
+        box-shadow: var(--box-shadow);
+        border-radius: var(--default-spacing);
+        border: 1px dashed;
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--default-spacing);
+
+            label {
+                display: flex;
+                flex-direction: column;
+                gap: calc(var(--default-spacing) / 2);
+            }
+            
+        }
+    }
+}
+
+#shorten-form {
+    label[for="url"] {
+        flex: 1
+    }
+}
+
+#shortened-url {
+    display: flex;
+    flex-direction: column;
+    gap: var(--default-spacing);
+    padding: var(--default-spacing);
+    text-align: center;
+    font-weight: bold;
+    font-size: var(--medium-size);
+}
+
+@media screen and (min-width: 768px) {
+    main {
+        article {
+            form {
+                flex-direction: row;
+                align-items: self-end;
+            }
+        }
+    }
+    #shorten-form {
+        width: 100%;
+    }
+}

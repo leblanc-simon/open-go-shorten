@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>OpenGoShorten</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="stylesheet" href="/static/css/reset.css">
+    <link rel="stylesheet" href="/static/css/app.css">
+    <link rel="stylesheet" href="/static/css/table.css">
+    <link rel="stylesheet" href="/static/css/dialog.css">
+    <link rel="stylesheet" href="/static/css/icon.css">
+
+    <link rel="icon" type="image/png" href="/static/img/favicon-48x48.png" sizes="48x48" />
+    <link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg" />
+    <link rel="shortcut icon" href="/static/img/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/img/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="OpenGoShorten" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+</head>
+
+<body>
+    <header>
+        <h1>OpenGoShorten - It's your links !</h1>
+        <button id="logout">Log out</div>
+    </header>
+    <main>
+        <article id="login-container">
+            <h2>Login</h2>
+            <form id="login-form">
+                <label for="username">
+                    Username
+                    <input type="text" id="username" name="username" required>
+                </label>
+                <label for="password">
+                    Password
+                    <input type="password" id="password" name="password" required>
+                </label>
+                <button type="submit">Login</button>
+            </form>
+        </article>
+
+        <article id="shorten-container">
+            <h2>Shorten URL</h2>
+            <form id="shorten-form">
+                <label for="url">
+                    URL
+                    <input type="url" id="url" name="url" required>
+                </label>
+                <label for="expiration">
+                    Expiration
+                    <input type="date" id="expiration" name="expiration">
+                </label>
+                <button type="submit">Shorten</button>
+            </form>
+
+            <p id="shortened-url"></p>
+        </article>
+
+        <article id="urls-container">
+            <h2>Shortened URLs</h2>
+            <table id="urls-table" class="notloading">
+                <thead>
+                    <tr>
+                        <th>URL</th>
+                        <th>Short URL</th>
+                        <th>Expiration</th>
+                        <th>Total Visits</th>
+                        <th>Unique Visitors</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </article>
+    </main>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/copy.js" defer async></script>
+    <script src="/static/js/delete.js" defer async></script>
+</body>
+
+</html>

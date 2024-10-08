@@ -1,0 +1,7 @@
+auth:
+  username: open-go-shorten
+  password: $2a$10$VHa0jiq656d0Fau4yHLh9OAvFt5oB4joJqM9s0PswemNdNIRlUHuC
+  jwt_secret: 7ec31ce7-4996-41ce-bfb7-b14d488ccfb7
+server:
+  host: "0.0.0.0"
+  port: 8080

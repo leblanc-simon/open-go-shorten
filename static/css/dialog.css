@@ -1,0 +1,22 @@
+dialog {
+    &::backdrop {
+        backdrop-filter: blur(10px);
+    }
+    article {
+        min-width: 50vw;
+        main {
+            display: inline-block;
+            margin-bottom: var(--default-spacing);
+        }
+        footer {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            button[data-remove] {
+                background-color: var(--danger-color);
+                color: var(--primary-color);
+                border-color: var(--border-color);
+            }
+        }
+    }
+}

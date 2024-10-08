@@ -1,0 +1,25 @@
+:root {
+    --default-spacing: 1rem;
+    --background-color: #29292c;
+    --secondary-background-color: #303033;
+    --primary-color: #ffffff;
+    --border-color: #ffffff;
+    --danger-color: rgba(217,22,41,.99);
+    --box-shadow: 1px 1px calc(var(--default-spacing) / 2) 5px rgba(156, 155, 155, 0.1);
+    --big-size: 2rem;
+    --medium-size: 1.6rem;
+    --normal-size: 1.1rem;
+    --small-size: 0.8rem;
+}
+
+* {
+    box-sizing: border-box;
+    font-size: var(--normal-size);
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+}
