@@ -150,7 +150,7 @@ async function fetchURLs() {
         <span class="copy" data-copy-text="Copy URL"></span>
         <a href="${window.location.origin}/${url.Shorten}" target="_blank" rel="noopener noreferer">${window.location.origin}/${url.Shorten}</a>
     </td>
-    <td>${url.URLData.url}</td>
+    <td><div class="overflow">${url.URLData.url}</div></td>
     <td>${expiration}</td>
     <td>${url.Stats.VisitorsCount}</td>
     <td>${url.Stats.UniqueVisitorsCount}</td>
