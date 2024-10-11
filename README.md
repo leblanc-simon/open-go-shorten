@@ -104,6 +104,3 @@ Contributions are welcome! If you find a bug or have a feature request, please o
 ## License
 
 [WTFPL](http://www.wtfpl.net/)
-
-## AI
-
