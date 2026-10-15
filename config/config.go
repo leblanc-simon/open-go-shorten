@@ -10,6 +10,15 @@ type Config struct {
 	Database Database `yaml:"database" env-prefix:"OGS_"`
 
 	Log appconf.Logging `yaml:"logging" env-prefix:"OGS_"`
+
+	QRCode QRCode `yaml:"qrcode"`
+}
+
+// QRCode is the configuration of the QR codes of the short links.
+type QRCode struct {
+	// Logo is the path of a PNG or JPEG image drawn in the center of every QR
+	// code. When empty, the QR codes are plain.
+	Logo string `yaml:"logo" env:"OGS_QRCODE_LOGO" env-description:"Path of a PNG or JPEG image drawn in the center of the QR codes, plain QR codes if empty"`
 }
 
 // DefaultPasswordHash is the bcrypt hash of the default password

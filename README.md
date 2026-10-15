@@ -80,6 +80,9 @@ server:
   trusted_proxies: []      # CIDR of your reverse proxies, e.g. ["127.0.0.1/32"]
   public_url:              # e.g. https://s.example.com, deduced from the request if empty
 
+qrcode:
+  logo:                    # PNG or JPEG image drawn in the center of the QR codes, plain QR codes if empty
+
 logging:
   level: error             # debug|info|warn|error
   format: text             # text|json
@@ -92,6 +95,7 @@ The environment variables that can be used to configure the application are:
 - `OGS_REDIS_HOST`, `OGS_REDIS_PORT`, `OGS_REDIS_PASSWORD`, `OGS_REDIS_DB`, `OGS_DB_PREFIX`
 - `OGS_HOST`, `OGS_PORT`, `OGS_RATE_LIMIT`, `OGS_TRUSTED_PROXIES`, `OGS_PUBLIC_URL`
 - `OGS_LOG_LEVEL`, `OGS_LOG_FORMAT`, `OGS_LOG_SOURCE`
+- `OGS_QRCODE_LOGO`
 
 When `jwt_secret` is empty, a random secret is generated at startup (the sessions are then lost on restart).
 The default administrator password is `open-go-shorten`: change it.
@@ -131,6 +135,10 @@ Each short link has a QR code, available from the web interface (QR icon) or dir
 
 Add `?download=1` to download the image as a file. The QR code encodes the full short link: its base URL is
 deduced from the request, or forced with the `public_url` setting (useful behind a reverse proxy).
+
+By default, the QR codes are plain. Set `qrcode.logo` (or `OGS_QRCODE_LOGO`) to the path of a PNG or JPEG image
+to draw it in the center of every QR code. The QR codes then use the highest error correction level, so they
+stay readable despite the logo. The image is loaded at startup: restart the server after changing it.
 
 
 ## Contributing

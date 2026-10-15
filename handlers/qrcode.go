@@ -12,9 +12,17 @@ import (
 )
 
 var publicURL string
+var qrGenerator = &qrcode.Generator{}
 
-func InitQRCode(c *config.Config) {
+func InitQRCode(c *config.Config) error {
 	publicURL = strings.TrimRight(c.Server.PublicURL, "/")
+
+	generator, err := qrcode.New(c.QRCode.Logo)
+	if err != nil {
+		return err
+	}
+	qrGenerator = generator
+	return nil
 }
 
 // QRCode serves the QR code of a short link, as SVG or PNG (512x512).
@@ -46,10 +54,10 @@ func QRCode(w http.ResponseWriter, r *http.Request) {
 	)
 	switch format {
 	case "svg":
-		data, err = qrcode.SVG(link)
+		data, err = qrGenerator.SVG(link)
 		contentType = "image/svg+xml"
 	case "png":
-		data, err = qrcode.PNG(link)
+		data, err = qrGenerator.PNG(link)
 		contentType = "image/png"
 	default:
 		http.Error(w, "Unsupported format", http.StatusNotFound)
