@@ -27,6 +27,8 @@ It was created as a test of an AI's ability to generate a codebase and a README 
 git clone https://github.com/leblanc-simon/open-go-shorten.git
 ```
 
+Go 1.26.3 or later is required.
+
 2. Install the dependencies:
 
 ```
@@ -47,9 +49,14 @@ go build -o open-go-shorten main.go
 
 ## Configuration
 
-The application can be configured using a YAML configuration file or environment variables. The configuration file is optional, and if it is not provided, the application will use the default values.
+The application relies on [open-go-base](https://github.com/leblanc-simon/open-go-base) for its configuration,
+logging and rate limiting. It can be configured using a YAML configuration file or environment variables.
+The configuration file is optional: if it does not exist, the configuration is read from the environment
+variables, and the default values are used for the missing ones.
 
 The configuration file should be named `config.yaml` and should be located in the same directory as the application, or indicate config filename with `-c [/your/path/config.yaml]`.
+
+`--help` lists every environment variable with its default value, `--version` prints the version.
 
 The configuration file should have the following structure:
 
@@ -57,34 +64,53 @@ The configuration file should have the following structure:
 auth:
   username: open-go-shorten
   password: $2a$10$Dd172CerAZ/UvlEzt0mESORk6XmEMgQea1TRpKdyr7t6Xjayiyh/m
-  jwt_secret: 019263ef-1532-7333-98d6-3f08007f99f2
+  jwt_secret: change-me-with-a-long-random-string
 
 database:
   host: 127.0.0.1
   port: 6379
   password:
-  database: 0
+  db: 0
   prefix: ogs-
 
 server:
   host: 127.0.0.1
   port: 9990
-  log_level: error
+  rate_limit: 100          # max requests per minute per client, 0 to disable
+  trusted_proxies: []      # CIDR of your reverse proxies, e.g. ["127.0.0.1/32"]
+  public_url:              # e.g. https://s.example.com, deduced from the request if empty
+
+logging:
+  level: error             # debug|info|warn|error
+  format: text             # text|json
+  source: false
 ```
 
 The environment variables that can be used to configure the application are:
 
-- `OGS_USERNAME`
-- `OGS_PASSWORD`
-- `OGS_JWT_SECRET`
-- `OGS_DB_HOST`
-- `OGS_DB_PORT`
-- `OGS_DB_PASSWORD`
-- `OGS_DB_DATABASE`
-- `OGS_DB_PREFIX`
-- `OGS_SERVER_HOST`
-- `OGS_SERVER_PORT`
-- `OGS_LOG_LEVEL`
+- `OGS_USERNAME`, `OGS_PASSWORD`, `OGS_JWT_SECRET`
+- `OGS_REDIS_HOST`, `OGS_REDIS_PORT`, `OGS_REDIS_PASSWORD`, `OGS_REDIS_DB`, `OGS_DB_PREFIX`
+- `OGS_HOST`, `OGS_PORT`, `OGS_RATE_LIMIT`, `OGS_TRUSTED_PROXIES`, `OGS_PUBLIC_URL`
+- `OGS_LOG_LEVEL`, `OGS_LOG_FORMAT`, `OGS_LOG_SOURCE`
+
+The password is a bcrypt hash, which can be generated with `htpasswd -bnBC 10 "" your-password | tr -d ':\n'`.
+
+### Reverse proxy
+
+The IP of the visitors (used for the statistics and the rate limiting) is read from the `X-Forwarded-For` /
+`X-Real-IP` headers **only** when the connection comes from a proxy listed in `trusted_proxies`. Behind a
+reverse proxy, set `trusted_proxies` to its address, otherwise every visitor gets the IP of the proxy.
+
+### Upgrading from 1.x
+
+The configuration changed when moving to open-go-base:
+
+| Before | Now |
+|---|---|
+| `OGS_SERVER_HOST`, `OGS_SERVER_PORT` | `OGS_HOST`, `OGS_PORT` |
+| `OGS_DB_HOST`, `OGS_DB_PORT`, `OGS_DB_PASSWORD`, `OGS_DB_DATABASE` | `OGS_REDIS_HOST`, `OGS_REDIS_PORT`, `OGS_REDIS_PASSWORD`, `OGS_REDIS_DB` |
+| `database.database` (YAML) | `database.db` |
+| `server.log_level` (YAML) | `logging.level` |
 
 ## Usage
 

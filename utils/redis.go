@@ -19,8 +19,8 @@ var redisPrefix string
 func InitRedis(c *config.Config) {
 	rdb = redis.NewClient(&redis.Options{
 		Addr:     c.Database.Host + ":" + strconv.Itoa(c.Database.Port),
-		Password: c.Database.Password, // no password set
-		DB:       c.Database.Database, // use default DB
+		Password: c.Database.Password,
+		DB:       c.Database.Db,
 	})
 	redisPrefix = c.Database.Prefix
 }

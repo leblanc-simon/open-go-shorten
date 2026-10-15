@@ -5,10 +5,16 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
 	"open-go-shorten.eu/models"
 	"open-go-shorten.eu/utils"
 )
+
+var clientIP = func(r *http.Request) string { return r.RemoteAddr }
+
+// InitClientIP sets the function used to resolve the IP of the visitors.
+func InitClientIP(f func(r *http.Request) string) {
+	clientIP = f
+}
 
 func ShortenURL(w http.ResponseWriter, r *http.Request) {
 	var urlData models.URLData
@@ -28,8 +34,7 @@ func ShortenURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteUrl(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	shortURL := vars["shortURL"]
+	shortURL := r.PathValue("shortURL")
 
 	err := utils.RemoveUrl(shortURL)
 	if err != nil {
@@ -41,8 +46,7 @@ func DeleteUrl(w http.ResponseWriter, r *http.Request) {
 }
 
 func RedirectURL(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	shortURL := vars["shortURL"]
+	shortURL := r.PathValue("shortURL")
 
 	// Retrieve original URL from Redis
 	originalURL, err := utils.GetOriginalURL(shortURL)
@@ -52,7 +56,7 @@ func RedirectURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract IP address and user agent from request
-	ip := utils.GetIP(r)
+	ip := clientIP(r)
 	userAgent := r.UserAgent()
 
 	// Create new Visit struct

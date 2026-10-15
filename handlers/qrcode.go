@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gorilla/mux"
 	"open-go-shorten.eu/config"
 	"open-go-shorten.eu/qrcode"
 	"open-go-shorten.eu/utils"
@@ -19,9 +18,8 @@ func InitQRCode(c *config.Config) {
 // QRCode serves the QR code of a short link, as SVG or PNG (512x512).
 // Add ?download=1 to get it as an attachment.
 func QRCode(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	shortURL := vars["shortURL"]
-	format := vars["format"]
+	shortURL := r.PathValue("shortURL")
+	format := r.PathValue("format")
 
 	if _, err := utils.GetOriginalURL(shortURL); err != nil {
 		http.Error(w, "URL not found or expired", http.StatusNotFound)

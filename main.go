@@ -1,18 +1,22 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"errors"
-	"flag"
 	"fmt"
-	"log"
+	"io/fs"
+	"log/slog"
 	"net/http"
 	"os"
-	"strconv"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/ilyakaznacheev/cleanenv"
+	"leblanc.io/open-go-base/appconf"
+	"leblanc.io/open-go-base/logx"
+	"leblanc.io/open-go-base/ratelimit"
 	"open-go-shorten.eu/config"
 	"open-go-shorten.eu/handlers"
 	"open-go-shorten.eu/middleware"
@@ -25,74 +29,99 @@ var staticFs embed.FS
 var version = "develop"
 var appName = "OpenGoShorten"
 
-type Args struct {
-	ConfigPath string
-}
-
-var cfg config.Config
-
 func main() {
-	args := ProcessArgs(&cfg)
-	// read configuration from the file and environment variables
-	if _, err := os.Stat(args.ConfigPath); errors.Is(err, os.ErrNotExist) {
-		if err := cleanenv.ReadEnv(&cfg); err != nil {
-			fmt.Println(err)
-			os.Exit(2)
-		}
-	} else {
-		if err := cleanenv.ReadConfig(args.ConfigPath, &cfg); err != nil {
-			fmt.Println(err)
-			os.Exit(2)
-		}
+	cfg := &config.Config{}
+	appconf.MustLoad(cfg, appconf.Options{Name: appName, Version: version})
+
+	logger := logx.New(cfg.Log)
+	slog.SetDefault(logger)
+
+	if err := run(cfg, logger); err != nil {
+		logger.Error("server stopped", "err", err)
+		os.Exit(1)
 	}
-
-	utils.InitRedis(&cfg)
-	middleware.InitJwt(&cfg)
-	handlers.InitAuth(&cfg)
-	handlers.InitQRCode(&cfg)
-
-	router := mux.NewRouter()
-
-	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		utils.SetResponseHeaders(w)
-		http.ServeFileFS(w, r, staticFs, "static/index.html")
-	}).Methods("GET")
-
-	router.PathPrefix("/static/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFileFS(w, r, staticFs, strings.TrimLeft(r.RequestURI, "/"))
-	}).Methods("GET")
-
-	router.HandleFunc("/login", handlers.Login).Methods("POST")
-
-	router.Handle("/shorten", middleware.JWTMiddleware(http.HandlerFunc(handlers.ShortenURL))).Methods("POST")
-	router.Handle("/urls", middleware.JWTMiddleware(http.HandlerFunc(handlers.GetURLs))).Methods("GET")
-	router.Handle("/{shortURL}", middleware.JWTMiddleware(http.HandlerFunc(handlers.DeleteUrl))).Methods("DELETE")
-
-	router.HandleFunc("/qrcode/{shortURL}/{format:svg|png}", handlers.QRCode).Methods("GET")
-	router.HandleFunc("/{shortURL}", handlers.RedirectURL).Methods("GET")
-
-	log.Printf("Running server %s", cfg.Server.Host+":"+strconv.Itoa(cfg.Server.Port))
-	log.Printf("%s running on version %s", appName, version)
-
-	http.ListenAndServe(cfg.Server.Host+":"+strconv.Itoa(cfg.Server.Port), router)
 }
 
-func ProcessArgs(cfg interface{}) Args {
-	var a Args
-
-	f := flag.NewFlagSet("OpenGoShorten", 1)
-
-	f.StringVar(&a.ConfigPath, "c", "config.yaml", "Path to configuration file")
-
-	fu := f.Usage
-	f.Usage = func() {
-		fu()
-		envHelp, _ := cleanenv.GetDescription(cfg, nil)
-		fmt.Fprintln(f.Output())
-		fmt.Fprintln(f.Output(), envHelp)
+func run(cfg *config.Config, logger *slog.Logger) error {
+	limiter, err := ratelimit.New(cfg.Server.RateLimit, cfg.Server.TrustedProxies)
+	if err != nil {
+		return err
 	}
 
-	f.Parse(os.Args[1:])
+	utils.InitRedis(cfg)
+	middleware.InitJwt(cfg)
+	handlers.InitAuth(cfg)
+	handlers.InitQRCode(cfg)
+	handlers.InitClientIP(limiter.ClientIP)
 
-	return a
+	staticDir, err := fs.Sub(staticFs, "static")
+	if err != nil {
+		return err
+	}
+
+	router := http.NewServeMux()
+
+	router.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		utils.SetResponseHeaders(w)
+		http.ServeFileFS(w, r, staticDir, "index.html")
+	})
+	router.Handle("GET /static/", http.StripPrefix("/static", noDirListing(http.FileServerFS(staticDir))))
+
+	router.HandleFunc("POST /login", handlers.Login)
+
+	router.Handle("POST /shorten", middleware.JWTMiddleware(http.HandlerFunc(handlers.ShortenURL)))
+	router.Handle("GET /urls", middleware.JWTMiddleware(http.HandlerFunc(handlers.GetURLs)))
+	router.Handle("DELETE /{shortURL}", middleware.JWTMiddleware(http.HandlerFunc(handlers.DeleteUrl)))
+
+	router.HandleFunc("GET /qrcode/{shortURL}/{format}", handlers.QRCode)
+	router.HandleFunc("GET /{shortURL}", handlers.RedirectURL)
+
+	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
+	server := &http.Server{
+		Addr:              addr,
+		Handler:           limiter.Middleware(router),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	errCh := make(chan error, 1)
+	go func() {
+		logger.Info("listening", "app", appName, "version", version, "addr", addr)
+		errCh <- server.ListenAndServe()
+	}()
+
+	select {
+	case err := <-errCh:
+		return err
+	case <-ctx.Done():
+	}
+
+	logger.Info("shutting down")
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		return err
+	}
+	if err := <-errCh; !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	return nil
+}
+
+// noDirListing prevents the file server from listing the content of the
+// embedded directories.
+func noDirListing(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/") {
+			http.NotFound(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
