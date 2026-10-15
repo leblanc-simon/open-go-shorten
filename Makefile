@@ -1,4 +1,4 @@
-VERSION := $(shell git tag | tail -n1)
+VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null || echo develop)
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 CURRENT_DIR := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
 OUTDIR := ${CURRENT_DIR}/releases/${VERSION}
@@ -23,11 +23,15 @@ build-darwin: ## Build release version for MacOS
 	@GOOS="darwin" GOARCH="amd64" CGO_ENABLED=0 go build -ldflags "-s -w -buildid= -X 'main.version=$(VERSION)'" -trimpath -o $(OUTDIR)/open-go-shorten-darwin-amd64 main.go
 	@GOOS="darwin" GOARCH="arm64" CGO_ENABLED=0 go build -ldflags "-s -w -buildid= -X 'main.version=$(VERSION)'" -trimpath -o $(OUTDIR)/open-go-shorten-darwin-arm64 main.go
 
-build-windows: ## Build release version for MacOS
+build-windows: ## Build release version for Windows
 	@GOOS="windows" GOARCH="amd64" CGO_ENABLED=0 go build -ldflags "-s -w -buildid= -X 'main.version=$(VERSION)'" -trimpath -o $(OUTDIR)/open-go-shorten-windows-amd64.exe main.go
+
+test: ## Run the tests
+	go vet ./...
+	go test -race ./...
 
 release: clean-build build-linux build-darwin build-windows ## Build the release version
 
-.PHONY: help
+.PHONY: help debug test release clean-build build-linux build-darwin build-windows
 .DEFAULT_GOAL := help
 .SHELLFLAGS += -e

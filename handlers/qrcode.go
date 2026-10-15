@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -21,8 +23,17 @@ func QRCode(w http.ResponseWriter, r *http.Request) {
 	shortURL := r.PathValue("shortURL")
 	format := r.PathValue("format")
 
-	if _, err := utils.GetOriginalURL(shortURL); err != nil {
-		http.Error(w, "URL not found or expired", http.StatusNotFound)
+	if !utils.IsValidShortURL(shortURL) {
+		http.NotFound(w, r)
+		return
+	}
+	if _, err := utils.GetOriginalURL(r.Context(), shortURL); err != nil {
+		if errors.Is(err, utils.ErrNotFound) {
+			http.Error(w, "URL not found or expired", http.StatusNotFound)
+		} else {
+			slog.Error("get original URL", "short_url", shortURL, "err", err)
+			http.Error(w, "Error retrieving URL", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -45,6 +56,7 @@ func QRCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
+		slog.Error("generate QR code", "short_url", shortURL, "err", err)
 		http.Error(w, "Error generating QR code", http.StatusInternalServerError)
 		return
 	}

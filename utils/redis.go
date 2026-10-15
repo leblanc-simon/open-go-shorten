@@ -3,16 +3,24 @@ package utils
 import (
 	"context"
 	"encoding/json"
-	"regexp"
+	"errors"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"open-go-shorten.eu/config"
 	"open-go-shorten.eu/models"
 )
 
-var ctx = context.Background()
+// maxCollisionAttempts bounds the search of a free short URL.
+const maxCollisionAttempts = 10
+
+var (
+	ErrNotFound       = errors.New("short URL not found")
+	ErrNoFreeShortURL = errors.New("no free short URL")
+)
+
 var rdb *redis.Client
 var redisPrefix string
 
@@ -25,95 +33,136 @@ func InitRedis(c *config.Config) {
 	redisPrefix = c.Database.Prefix
 }
 
-func StoreURL(shortURL, originalURL string, expiration time.Time) error {
-	if expiration.IsZero() {
-		return rdb.Set(ctx, redisPrefix+shortURL, originalURL, 0).Err()
-	} else {
-		return rdb.Set(ctx, redisPrefix+shortURL, originalURL, time.Until(expiration)).Err()
+// PingRedis checks the connection to the Redis server.
+func PingRedis(ctx context.Context) error {
+	return rdb.Ping(ctx).Err()
+}
+
+func urlKey(shortURL string) string {
+	return redisPrefix + shortURL
+}
+
+func visitsKey(shortURL string) string {
+	return redisPrefix + "visits-" + shortURL
+}
+
+// StoreURL stores the original URL and returns its short URL. A nil expiration
+// means that the short URL never expires. Shortening an already shortened URL
+// returns the same short URL and updates its expiration.
+func StoreURL(ctx context.Context, originalURL string, expiration *time.Time) (string, error) {
+	var ttl time.Duration
+	if expiration != nil {
+		ttl = time.Until(*expiration)
+		if ttl <= 0 {
+			return "", errors.New("expiration date is in the past")
+		}
 	}
+
+	for attempt := 0; attempt < maxCollisionAttempts; attempt++ {
+		shortURL, err := GenerateShortURL(originalURL, attempt)
+		if err != nil {
+			return "", err
+		}
+
+		existing, err := rdb.Get(ctx, urlKey(shortURL)).Result()
+		if err != nil && !errors.Is(err, redis.Nil) {
+			return "", err
+		}
+		if err == nil && existing != originalURL {
+			// Collision with another URL: never overwrite it.
+			continue
+		}
+
+		return shortURL, rdb.Set(ctx, urlKey(shortURL), originalURL, ttl).Err()
+	}
+
+	return "", ErrNoFreeShortURL
 }
 
-func RemoveUrl(shortURL string) error {
-	rdb.Del(ctx, redisPrefix+"visits-"+shortURL).Err()
-	return rdb.Del(ctx, redisPrefix+shortURL).Err()
+func RemoveUrl(ctx context.Context, shortURL string) error {
+	return rdb.Del(ctx, urlKey(shortURL), visitsKey(shortURL)).Err()
 }
 
-func GetOriginalURL(shortURL string) (string, error) {
-	return rdb.Get(ctx, redisPrefix+shortURL).Result()
+// GetOriginalURL returns the original URL of a short URL, or ErrNotFound.
+func GetOriginalURL(ctx context.Context, shortURL string) (string, error) {
+	originalURL, err := rdb.Get(ctx, urlKey(shortURL)).Result()
+	if errors.Is(err, redis.Nil) {
+		return "", ErrNotFound
+	}
+	return originalURL, err
 }
 
-func StoreVisit(shortURL string, visit models.Visit) error {
-	jsonVisit, _ := json.Marshal(visit)
-	return rdb.LPush(ctx, redisPrefix+"visits-"+shortURL, jsonVisit).Err()
-}
-
-func GetUrls() ([]models.History, error) {
-	var history []models.History
-
-	urlsJSON, err := rdb.Keys(ctx, "ogs-*").Result()
+func StoreVisit(ctx context.Context, shortURL string, visit models.Visit) error {
+	jsonVisit, err := json.Marshal(visit)
 	if err != nil {
+		return err
+	}
+	return rdb.LPush(ctx, visitsKey(shortURL), jsonVisit).Err()
+}
+
+// GetUrls returns every short URL with its statistics.
+func GetUrls(ctx context.Context) ([]models.History, error) {
+	history := []models.History{}
+
+	iter := rdb.Scan(ctx, 0, redisPrefix+"*", 100).Iterator()
+	for iter.Next(ctx) {
+		key := iter.Val()
+		shortURL := strings.TrimPrefix(key, redisPrefix)
+		if strings.HasPrefix(shortURL, "visits-") {
+			continue
+		}
+
+		originalURL, err := rdb.Get(ctx, key).Result()
+		if err != nil {
+			// Expired between SCAN and GET, or not a short URL.
+			continue
+		}
+
+		ttl, err := rdb.TTL(ctx, key).Result()
+		if err != nil {
+			return nil, err
+		}
+		var expiration *time.Time
+		if ttl > 0 {
+			t := time.Now().Add(ttl)
+			expiration = &t
+		}
+
+		stats, err := getStats(ctx, shortURL)
+		if err != nil {
+			return nil, err
+		}
+
+		history = append(history, models.History{
+			URLData: models.URLData{URL: originalURL, Expiration: expiration},
+			Stats:   stats,
+			Shorten: shortURL,
+		})
+	}
+	if err := iter.Err(); err != nil {
 		return nil, err
 	}
 
-	for _, shortURL := range urlsJSON {
-		regexForPrefix := regexp.MustCompile(`\bogs-\b`)
-		realShortURL := regexForPrefix.ReplaceAllLiteralString(shortURL, "")
+	return history, nil
+}
 
-		originalURL, err := rdb.Get(ctx, shortURL).Result()
-		if err != nil {
-			continue
-		}
-
-		// Query Redis for visit events for the given shortened URL
-		visitsJSON, err := rdb.LRange(ctx, redisPrefix+"visits-"+realShortURL, 0, -1).Result()
-		if err != nil {
-			continue
-		}
-
-		// Parse visit events and filter for the given shortened URL
-		var visits []models.Visit
-		for _, jsonVisit := range visitsJSON {
-			var visit models.Visit
-			json.Unmarshal([]byte(jsonVisit), &visit)
-			visits = append(visits, visit)
-		}
-
-		// Calculate statistics
-		totalVisits := len(visits)
-		uniqueVisitors := make(map[string]models.Visit)
-		for _, visit := range visits {
-			uniqueVisitors[visit.IP] = visit
-		}
-		uniqueVisitorsCount := len(uniqueVisitors)
-
-		// Create URLData struct
-		var urlData models.URLData
-		if rdb.TTL(ctx, redisPrefix+realShortURL).Val() == -1 {
-			urlData = models.URLData{
-				URL:        originalURL,
-				Expiration: time.Unix(0, 1),
-			}
-		} else {
-			urlData = models.URLData{
-				URL:        originalURL,
-				Expiration: time.Now().Add(rdb.TTL(ctx, redisPrefix+realShortURL).Val()),
-			}
-		}
-
-		// Create Stats struct
-		stats := models.Stats{
-			VisitorsCount:       totalVisits,
-			UniqueVisitorsCount: uniqueVisitorsCount,
-			Visitors:            visits,
-		}
-
-		// Add URLData and Stats to list of URLs
-		history = append(history, models.History{
-			URLData: urlData,
-			Stats:   stats,
-			Shorten: realShortURL,
-		})
+func getStats(ctx context.Context, shortURL string) (models.Stats, error) {
+	visitsJSON, err := rdb.LRange(ctx, visitsKey(shortURL), 0, -1).Result()
+	if err != nil {
+		return models.Stats{}, err
 	}
 
-	return history, nil
+	uniqueVisitors := make(map[string]struct{})
+	for _, jsonVisit := range visitsJSON {
+		var visit models.Visit
+		if err := json.Unmarshal([]byte(jsonVisit), &visit); err != nil {
+			continue
+		}
+		uniqueVisitors[visit.IP] = struct{}{}
+	}
+
+	return models.Stats{
+		VisitorsCount:       len(visitsJSON),
+		UniqueVisitorsCount: len(uniqueVisitors),
+	}, nil
 }

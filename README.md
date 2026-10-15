@@ -64,7 +64,7 @@ The configuration file should have the following structure:
 auth:
   username: open-go-shorten
   password: $2a$10$Dd172CerAZ/UvlEzt0mESORk6XmEMgQea1TRpKdyr7t6Xjayiyh/m
-  jwt_secret: change-me-with-a-long-random-string
+  jwt_secret: change-me-with-a-long-random-string  # random if empty: sessions are lost on restart
 
 database:
   host: 127.0.0.1
@@ -93,6 +93,9 @@ The environment variables that can be used to configure the application are:
 - `OGS_HOST`, `OGS_PORT`, `OGS_RATE_LIMIT`, `OGS_TRUSTED_PROXIES`, `OGS_PUBLIC_URL`
 - `OGS_LOG_LEVEL`, `OGS_LOG_FORMAT`, `OGS_LOG_SOURCE`
 
+When `jwt_secret` is empty, a random secret is generated at startup (the sessions are then lost on restart).
+The default administrator password is `open-go-shorten`: change it.
+
 The password is a bcrypt hash, which can be generated with `htpasswd -bnBC 10 "" your-password | tr -d ':\n'`.
 
 ### Reverse proxy
@@ -111,6 +114,7 @@ The configuration changed when moving to open-go-base:
 | `OGS_DB_HOST`, `OGS_DB_PORT`, `OGS_DB_PASSWORD`, `OGS_DB_DATABASE` | `OGS_REDIS_HOST`, `OGS_REDIS_PORT`, `OGS_REDIS_PASSWORD`, `OGS_REDIS_DB` |
 | `database.database` (YAML) | `database.db` |
 | `server.log_level` (YAML) | `logging.level` |
+| default `jwt_secret` | random secret (the previous public default is ignored) |
 
 ## Usage
 

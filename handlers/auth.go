@@ -1,32 +1,38 @@
 package handlers
 
 import (
-	"encoding/json"
+	"crypto/subtle"
 	"net/http"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"open-go-shorten.eu/config"
 	"open-go-shorten.eu/models"
 )
 
-var jwtSecret string
+var jwtSecret []byte
 var username string
-var password string
+var password []byte
 
 func InitAuth(c *config.Config) {
-	jwtSecret = c.Auth.JwtSecret
+	jwtSecret = []byte(c.Auth.JwtSecret)
 	username = c.Auth.Username
-	password = c.Auth.Password
+	password = []byte(c.Auth.Password)
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
 	var user models.User
-	json.NewDecoder(r.Body).Decode(&user)
+	if err := decodeJSON(w, r, &user); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
 
-	// Verify credentials
-	if user.Username != username || nil != bcrypt.CompareHashAndPassword([]byte(password), []byte(user.Password)) {
+	// Verify credentials (always check the password to not leak the username
+	// through the response time)
+	validUsername := subtle.ConstantTimeCompare([]byte(user.Username), []byte(username)) == 1
+	validPassword := bcrypt.CompareHashAndPassword(password, []byte(user.Password)) == nil
+	if !validUsername || !validPassword {
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
@@ -37,12 +43,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		"exp":      time.Now().Add(time.Hour * 24).Unix(),
 	})
 
-	tokenString, err := token.SignedString([]byte(jwtSecret))
+	tokenString, err := token.SignedString(jwtSecret)
 	if err != nil {
 		http.Error(w, "Error creating JWT", http.StatusInternalServerError)
 		return
 	}
 
 	// Return JWT
-	json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+	writeJSON(w, map[string]string{"token": tokenString})
 }

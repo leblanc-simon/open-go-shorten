@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"embed"
 	"errors"
 	"fmt"
@@ -48,7 +50,17 @@ func run(cfg *config.Config, logger *slog.Logger) error {
 		return err
 	}
 
+	if err := checkAuth(cfg, logger); err != nil {
+		return err
+	}
+
 	utils.InitRedis(cfg)
+	pingCtx, cancelPing := context.WithTimeout(context.Background(), 5*time.Second)
+	if err := utils.PingRedis(pingCtx); err != nil {
+		logger.Warn("Redis is not reachable", "err", err)
+	}
+	cancelPing()
+
 	middleware.InitJwt(cfg)
 	handlers.InitAuth(cfg)
 	handlers.InitQRCode(cfg)
@@ -110,6 +122,33 @@ func run(cfg *config.Config, logger *slog.Logger) error {
 	}
 	if err := <-errCh; !errors.Is(err, http.ErrServerClosed) {
 		return err
+	}
+	return nil
+}
+
+// oldDefaultJwtSecret was the default JWT secret of the previous versions: being public, it
+// allows anyone to forge authentication tokens.
+const oldDefaultJwtSecret = "019263ef-1532-7333-98d6-3f08007f99f2"
+
+// checkAuth warns about an insecure authentication configuration, and
+// generates a random JWT secret when none is configured.
+func checkAuth(cfg *config.Config, logger *slog.Logger) error {
+	if cfg.Auth.Password == config.DefaultPasswordHash {
+		logger.Warn("the default administrator password is used, change it")
+	}
+
+	if cfg.Auth.JwtSecret == oldDefaultJwtSecret {
+		cfg.Auth.JwtSecret = ""
+		logger.Warn("the JWT secret is the public default of previous versions, it is ignored")
+	}
+
+	if cfg.Auth.JwtSecret == "" {
+		secret := make([]byte, 32)
+		if _, err := rand.Read(secret); err != nil {
+			return err
+		}
+		cfg.Auth.JwtSecret = hex.EncodeToString(secret)
+		logger.Warn("no JWT secret configured, a random one is used: sessions are lost on restart")
 	}
 	return nil
 }

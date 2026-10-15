@@ -3,17 +3,23 @@ package config
 import "leblanc.io/open-go-base/appconf"
 
 type Config struct {
-	Auth struct {
-		Username  string `yaml:"username" env:"OGS_USERNAME" env-default:"open-go-shorten" env-description:"Login of the administrator"`
-		Password  string `yaml:"password" env:"OGS_PASSWORD" env-default:"$2a$10$Dd172CerAZ/UvlEzt0mESORk6XmEMgQea1TRpKdyr7t6Xjayiyh/m" env-description:"Bcrypt hash of the administrator password"`
-		JwtSecret string `yaml:"jwt_secret" env:"OGS_JWT_SECRET" env-default:"019263ef-1532-7333-98d6-3f08007f99f2" env-description:"Secret used to sign the authentication tokens"`
-	} `yaml:"auth"`
+	Auth Auth `yaml:"auth"`
 
 	Server Server `yaml:"server" env-prefix:"OGS_"`
 
 	Database Database `yaml:"database" env-prefix:"OGS_"`
 
 	Log appconf.Logging `yaml:"logging" env-prefix:"OGS_"`
+}
+
+// DefaultPasswordHash is the bcrypt hash of the default password
+// "open-go-shorten".
+const DefaultPasswordHash = "$2a$10$Dd172CerAZ/UvlEzt0mESORk6XmEMgQea1TRpKdyr7t6Xjayiyh/m"
+
+type Auth struct {
+	Username  string `yaml:"username" env:"OGS_USERNAME" env-default:"open-go-shorten" env-description:"Login of the administrator"`
+	Password  string `yaml:"password" env:"OGS_PASSWORD" env-default:"$2a$10$Dd172CerAZ/UvlEzt0mESORk6XmEMgQea1TRpKdyr7t6Xjayiyh/m" env-description:"Bcrypt hash of the administrator password"`
+	JwtSecret string `yaml:"jwt_secret" env:"OGS_JWT_SECRET" env-description:"Secret used to sign the authentication tokens, random if empty (sessions are then lost on restart)"`
 }
 
 // Server is the web server configuration: OGS_HOST, OGS_PORT, OGS_RATE_LIMIT,

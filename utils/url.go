@@ -4,31 +4,54 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"math/big"
-	"os"
+	"net/url"
+	"regexp"
+	"strconv"
 
 	"github.com/itchyny/base58-go"
 )
 
-func sha256Of(input string) []byte {
-	algorithm := sha256.New()
-	algorithm.Write([]byte(input))
-	return algorithm.Sum(nil)
+// shortURLLength is the length of the generated short URLs.
+const shortURLLength = 8
+
+var shortURLPattern = regexp.MustCompile(`^[1-9A-HJ-NP-Za-km-z]{1,32}$`)
+
+// IsValidShortURL reports whether s can be a short URL (base58 characters only).
+func IsValidShortURL(s string) bool {
+	return shortURLPattern.MatchString(s)
 }
 
-func base58Encoded(bytes []byte) string {
-	encoding := base58.BitcoinEncoding
-	encoded, err := encoding.Encode(bytes)
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+// GenerateShortURL returns the short URL of the original URL. The result is
+// deterministic; attempt > 0 gives alternative values, used on collision.
+func GenerateShortURL(originalURL string, attempt int) (string, error) {
+	input := originalURL
+	if attempt > 0 {
+		input += "#" + strconv.Itoa(attempt)
 	}
-	return string(encoded)
+
+	hash := sha256.Sum256([]byte(input))
+	number := new(big.Int).SetBytes(hash[:]).Uint64()
+	encoded, err := base58.BitcoinEncoding.Encode([]byte(strconv.FormatUint(number, 10)))
+	if err != nil {
+		return "", fmt.Errorf("encode short URL: %w", err)
+	}
+	return string(encoded[:shortURLLength]), nil
 }
 
-func GenerateShortURL(url string) string {
-	urlHashBytes := sha256Of(url)
-	generatedNumber := new(big.Int).SetBytes(urlHashBytes).Uint64()
-	finalString := base58Encoded([]byte(fmt.Sprintf("%d", generatedNumber)))
-	return finalString[:8]
-
+// ValidateURL checks that raw is an absolute http(s) URL.
+func ValidateURL(raw string) error {
+	if len(raw) > 4096 {
+		return fmt.Errorf("URL too long")
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid URL")
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("only http and https URLs are allowed")
+	}
+	if u.Host == "" {
+		return fmt.Errorf("URL without host")
+	}
+	return nil
 }

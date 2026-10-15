@@ -1,7 +1,8 @@
 package handlers
 
 import (
-	"encoding/json"
+	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -18,61 +19,79 @@ func InitClientIP(f func(r *http.Request) string) {
 
 func ShortenURL(w http.ResponseWriter, r *http.Request) {
 	var urlData models.URLData
-	json.NewDecoder(r.Body).Decode(&urlData)
-
-	// Generate short URL
-	shortURL := utils.GenerateShortURL(urlData.URL)
+	if err := decodeJSON(w, r, &urlData); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+	if err := utils.ValidateURL(urlData.URL); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if urlData.Expiration != nil && !urlData.Expiration.After(time.Now()) {
+		http.Error(w, "Expiration date is in the past", http.StatusBadRequest)
+		return
+	}
 
 	// Store short URL, original URL, and expiration date in Redis
-	err := utils.StoreURL(shortURL, urlData.URL, urlData.Expiration)
+	shortURL, err := utils.StoreURL(r.Context(), urlData.URL, urlData.Expiration)
 	if err != nil {
+		slog.Error("store URL", "url", urlData.URL, "err", err)
 		http.Error(w, "Error storing URL", http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{"shortURL": shortURL})
+	writeJSON(w, map[string]string{"shortURL": shortURL})
 }
 
 func DeleteUrl(w http.ResponseWriter, r *http.Request) {
 	shortURL := r.PathValue("shortURL")
+	if !utils.IsValidShortURL(shortURL) {
+		http.NotFound(w, r)
+		return
+	}
 
-	err := utils.RemoveUrl(shortURL)
-	if err != nil {
+	if err := utils.RemoveUrl(r.Context(), shortURL); err != nil {
+		slog.Error("remove URL", "short_url", shortURL, "err", err)
 		http.Error(w, "URL can't be deleted", http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(map[string]string{"shortURL": shortURL})
+	writeJSON(w, map[string]string{"shortURL": shortURL})
 }
 
 func RedirectURL(w http.ResponseWriter, r *http.Request) {
 	shortURL := r.PathValue("shortURL")
+	if !utils.IsValidShortURL(shortURL) {
+		http.NotFound(w, r)
+		return
+	}
 
 	// Retrieve original URL from Redis
-	originalURL, err := utils.GetOriginalURL(shortURL)
-	if err != nil {
+	originalURL, err := utils.GetOriginalURL(r.Context(), shortURL)
+	if errors.Is(err, utils.ErrNotFound) {
 		http.Error(w, "URL not found or expired", http.StatusNotFound)
 		return
 	}
-
-	// Extract IP address and user agent from request
-	ip := clientIP(r)
-	userAgent := r.UserAgent()
-
-	// Create new Visit struct
-	visit := models.Visit{
-		Timestamp: time.Now(),
-		IP:        ip,
-		UserAgent: userAgent,
-		ShortURL:  shortURL,
-	}
-
-	// Store visit event in Redis
-	err = utils.StoreVisit(shortURL, visit)
 	if err != nil {
-		http.Error(w, "Error storing visit", http.StatusInternalServerError)
+		slog.Error("get original URL", "short_url", shortURL, "err", err)
+		http.Error(w, "Error retrieving URL", http.StatusInternalServerError)
 		return
 	}
 
-	http.Redirect(w, r, originalURL, http.StatusMovedPermanently)
+	// Store visit event in Redis: a failure must not prevent the redirection
+	visit := models.Visit{
+		Timestamp: time.Now(),
+		IP:        clientIP(r),
+		UserAgent: r.UserAgent(),
+		ShortURL:  shortURL,
+	}
+	if err := utils.StoreVisit(r.Context(), shortURL, visit); err != nil {
+		slog.Error("store visit", "short_url", shortURL, "err", err)
+	}
+
+	// Temporary redirection: a permanent one would be cached by the browsers,
+	// so the next visits would not be counted, and a deleted short URL would
+	// still be followed.
+	w.Header().Set("Cache-Control", "private, no-store")
+	http.Redirect(w, r, originalURL, http.StatusFound)
 }
