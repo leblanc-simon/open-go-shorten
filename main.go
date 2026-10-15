@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"crypto/rand"
-	"encoding/hex"
 	"embed"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
