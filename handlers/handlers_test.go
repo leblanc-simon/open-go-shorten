@@ -36,7 +36,9 @@ func setup(t *testing.T) (*miniredis.Miniredis, http.Handler) {
 	utils.InitRedis(cfg)
 	middleware.InitJwt(cfg)
 	InitAuth(cfg)
-	InitQRCode(cfg)
+	if err := InitQRCode(cfg); err != nil {
+		t.Fatal(err)
+	}
 	InitClientIP(func(r *http.Request) string { return "192.0.2.1" })
 
 	mux := http.NewServeMux()

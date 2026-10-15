@@ -8,6 +8,7 @@ require (
 	github.com/itchyny/base58-go v0.2.2
 	github.com/redis/go-redis/v9 v9.23.0
 	golang.org/x/crypto v0.53.0
+	golang.org/x/image v0.47.0
 	leblanc.io/open-go-base v1.0.1
 	rsc.io/qr v0.2.0
 )
@@ -23,7 +24,7 @@ require (
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.uber.org/atomic v1.12.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	olympos.io/encoding/edn v0.0.0-20201019073823-d3554ca0b0a3 // indirect
 )

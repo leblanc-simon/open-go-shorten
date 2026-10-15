@@ -63,7 +63,9 @@ func run(cfg *config.Config, logger *slog.Logger) error {
 
 	middleware.InitJwt(cfg)
 	handlers.InitAuth(cfg)
-	handlers.InitQRCode(cfg)
+	if err := handlers.InitQRCode(cfg); err != nil {
+		return err
+	}
 	handlers.InitClientIP(limiter.ClientIP)
 
 	staticDir, err := fs.Sub(staticFs, "static")
