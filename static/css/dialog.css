@@ -20,3 +20,18 @@ dialog {
         }
     }
 }
+dialog.qrcode-dialog article main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--default-spacing);
+    img {
+        width: min(256px, 70vw);
+        height: auto;
+        background-color: #fff;
+    }
+    nav {
+        display: flex;
+        gap: calc(var(--default-spacing) * 2);
+    }
+}

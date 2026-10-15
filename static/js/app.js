@@ -55,10 +55,17 @@ const logout = () => {
 // By default, display login
 displayLogin();
 
+const tokenExpiration = (jwt) => {
+    try {
+        const payload = jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(atob(payload)).exp * 1000;
+    } catch (e) {
+        return 0;
+    }
+};
+
 if (token) {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const expirationTime = payload.exp * 1000;
-    if (expirationTime > Date.now()) {
+    if (tokenExpiration(token) > Date.now()) {
         displayApp()
     } else {
         localStorage.removeItem('token');
@@ -112,18 +119,47 @@ shortenForm.addEventListener('submit', async (event) => {
 
     if (response.ok) {
         const data = await response.json();
-        shortenedUrl.innerHTML = `
-        Shortened URL:
-        <a href="${window.location.origin}/${data.shortURL}" target="_blank" rel="noopener noreferer">
-            <span class="copy" data-copy-text="Copy URL"></span>
-            ${window.location.origin}/${data.shortURL}
-        </a>
-        `;
+        const qrcode = document.createElement('i');
+        qrcode.className = 'qrcode';
+        qrcode.dataset.qrcode = data.shortURL;
+        qrcode.title = 'QR code';
+        const qrcodeContainer = document.createElement('span');
+        qrcodeContainer.appendChild(qrcode);
+        shortenedUrl.replaceChildren('Shortened URL:', shortLink(data.shortURL), qrcodeContainer);
+        shortenForm.reset();
         fetchURLs();
+    } else if (response.status === 401) {
+        logout();
     } else {
-        alert('Error shortening URL');
+        alert('Error shortening URL: ' + (await response.text()));
     }
 });
+
+const shortLink = (shortURL) => {
+    const link = document.createElement('a');
+    link.href = `${window.location.origin}/${shortURL}`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    const copy = document.createElement('span');
+    copy.className = 'copy';
+    copy.dataset.copyText = 'Copy URL';
+    link.append(copy, link.href);
+    return link;
+};
+
+const cell = (...children) => {
+    const td = document.createElement('td');
+    td.append(...children);
+    return td;
+};
+
+const icon = (className, dataName, shortURL, title) => {
+    const i = document.createElement('i');
+    i.className = className;
+    i.dataset[dataName] = shortURL;
+    i.title = title;
+    return i;
+};
 
 async function fetchURLs() {
     const response = await fetch('/urls', {
@@ -133,33 +169,41 @@ async function fetchURLs() {
         },
     });
 
-    if (response.ok) {
-        const urls = await response.json();
-        urlsTableBody.innerHTML = '';
-        for (const url of urls) {
-            const row = document.createElement('tr');
-            row.id = url.Shorten;
-            let expiration;
-            if ("1970-01-01T01:00:00.000000001+01:00" === url.URLData.expiration) {
-                expiration = 'No expiration';
-            } else {
-                expiration = new Date(url.URLData.expiration).toLocaleString();
-            }
-            row.innerHTML = `
-    <td>
-        <span class="copy" data-copy-text="Copy URL"></span>
-        <a href="${window.location.origin}/${url.Shorten}" target="_blank" rel="noopener noreferer">${window.location.origin}/${url.Shorten}</a>
-    </td>
-    <td><div class="overflow">${url.URLData.url}</div></td>
-    <td>${expiration}</td>
-    <td>${url.Stats.VisitorsCount}</td>
-    <td>${url.Stats.UniqueVisitorsCount}</td>
-    <td><i class="delete" data-delete="${url.Shorten}"></i></td>
-    `;
-            urlsTableBody.appendChild(row);
-        }
-        urlsTable.classList.remove('notloading');
-    } else {
-        alert('Error retrieving URLs');
+    if (response.status === 401) {
+        logout();
+        return;
     }
+    if (!response.ok) {
+        alert('Error retrieving URLs');
+        return;
+    }
+
+    const urls = await response.json();
+    const rows = urls.map((url) => {
+        const row = document.createElement('tr');
+        row.id = url.Shorten;
+
+        const originalURL = document.createElement('div');
+        originalURL.className = 'overflow';
+        originalURL.textContent = url.URLData.url;
+
+        const expiration = url.URLData.expiration
+            ? new Date(url.URLData.expiration).toLocaleString()
+            : 'No expiration';
+
+        row.append(
+            cell(shortLink(url.Shorten)),
+            cell(originalURL),
+            cell(expiration),
+            cell(String(url.Stats.VisitorsCount)),
+            cell(String(url.Stats.UniqueVisitorsCount)),
+            cell(
+                icon('qrcode', 'qrcode', url.Shorten, 'QR code'),
+                icon('delete', 'delete', url.Shorten, 'Delete'),
+            ),
+        );
+        return row;
+    });
+    urlsTableBody.replaceChildren(...rows);
+    urlsTable.classList.remove('notloading');
 }

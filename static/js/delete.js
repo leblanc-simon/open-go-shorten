@@ -6,7 +6,9 @@ const confirmDelete = (shortenUrl) => {
     const cancel = document.createElement('button');
     const ok = document.createElement('button');
 
-    main.innerHTML = `Could you delete the short link : <strong>${window.location.origin}/${shortenUrl}</strong> ?`;
+    const link = document.createElement('strong');
+    link.textContent = `${window.location.origin}/${shortenUrl}`;
+    main.append('Could you delete the short link : ', link, ' ?');
     article.appendChild(main);
 
     cancel.addEventListener('click', closeDelete, true);
@@ -14,18 +16,24 @@ const confirmDelete = (shortenUrl) => {
     ok.addEventListener('click', async (event) => {
         event.preventDefault();
         try {
-            const response = await fetch('/' + shortenUrl, {
+            const response = await fetch('/' + encodeURIComponent(shortenUrl), {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },
             });
+            if (response.status === 401) {
+                closeDelete(dialog);
+                logout();
+                return;
+            }
             if (!response.ok) {
+                alert('Error deleting URL');
                 return;
             }
 
             const jsonResponse = await response.json();
-            document.querySelector('#' + jsonResponse.shortURL)?.remove();
+            document.getElementById(jsonResponse.shortURL)?.remove();
         } catch (e) {
             console.error(e);
         }
