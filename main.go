@@ -49,6 +49,7 @@ func main() {
 	utils.InitRedis(&cfg)
 	middleware.InitJwt(&cfg)
 	handlers.InitAuth(&cfg)
+	handlers.InitQRCode(&cfg)
 
 	router := mux.NewRouter()
 
@@ -67,6 +68,7 @@ func main() {
 	router.Handle("/urls", middleware.JWTMiddleware(http.HandlerFunc(handlers.GetURLs))).Methods("GET")
 	router.Handle("/{shortURL}", middleware.JWTMiddleware(http.HandlerFunc(handlers.DeleteUrl))).Methods("DELETE")
 
+	router.HandleFunc("/qrcode/{shortURL}/{format:svg|png}", handlers.QRCode).Methods("GET")
 	router.HandleFunc("/{shortURL}", handlers.RedirectURL).Methods("GET")
 
 	log.Printf("Running server %s", cfg.Server.Host+":"+strconv.Itoa(cfg.Server.Port))

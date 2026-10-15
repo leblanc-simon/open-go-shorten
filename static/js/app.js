@@ -118,6 +118,7 @@ shortenForm.addEventListener('submit', async (event) => {
             <span class="copy" data-copy-text="Copy URL"></span>
             ${window.location.origin}/${data.shortURL}
         </a>
+        <span><i class="qrcode" data-qrcode="${data.shortURL}" title="QR code"></i></span>
         `;
         fetchURLs();
     } else {
@@ -154,7 +155,10 @@ async function fetchURLs() {
     <td>${expiration}</td>
     <td>${url.Stats.VisitorsCount}</td>
     <td>${url.Stats.UniqueVisitorsCount}</td>
-    <td><i class="delete" data-delete="${url.Shorten}"></i></td>
+    <td>
+        <i class="qrcode" data-qrcode="${url.Shorten}" title="QR code"></i>
+        <i class="delete" data-delete="${url.Shorten}" title="Delete"></i>
+    </td>
     `;
             urlsTableBody.appendChild(row);
         }

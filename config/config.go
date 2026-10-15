@@ -19,5 +19,8 @@ type Config struct {
 		Host     string `yaml:"host" env:"OGS_SERVER_HOST" env-default:"127.0.0.1"`
 		Port     int    `yaml:"port" env:"OGS_SERVER_PORT" env-default:"9990"`
 		LogLevel string `yaml:"log_level" env:"OGS_LOG_LEVEL" env-default:"error"`
+		// PublicURL is the base URL of the short links (e.g. https://s.example.com).
+		// When empty, it is deduced from the incoming request.
+		PublicURL string `yaml:"public_url" env:"OGS_PUBLIC_URL"`
 	} `yaml:"server"`
 }

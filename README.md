@@ -16,6 +16,7 @@ It was created as a test of an AI's ability to generate a codebase and a README 
 - Simple web interface for managing URLs
 - Supports expiration dates for URLs
 - Statistics for URLs (total visits, unique visitors)
+- QR code of each short link (SVG and 512x512 PNG)
 - Supports multiple platforms (Linux, MacOS, Windows)
 
 ## Installation
@@ -90,6 +91,16 @@ The environment variables that can be used to configure the application are:
 ### Web Interface
 
 The web interface can be accessed by opening a web browser and navigating to `http://localhost:9990`. The default username and password are `open-go-shorten` and `open-go-shorten`, respectively.
+
+### QR codes
+
+Each short link has a QR code, available from the web interface (QR icon) or directly:
+
+- `GET /qrcode/{shortURL}/svg`: scalable SVG image
+- `GET /qrcode/{shortURL}/png`: 512x512 PNG image
+
+Add `?download=1` to download the image as a file. The QR code encodes the full short link: its base URL is
+deduced from the request, or forced with the `public_url` setting (useful behind a reverse proxy).
 
 
 ## Contributing
