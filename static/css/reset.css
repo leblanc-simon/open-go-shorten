@@ -1,25 +1,60 @@
 :root {
-    --default-spacing: 1rem;
-    --background-color: #29292c;
-    --secondary-background-color: #303033;
-    --primary-color: #ffffff;
-    --border-color: #ffffff;
-    --danger-color: rgba(217,22,41,.99);
-    --box-shadow: 1px 1px calc(var(--default-spacing) / 2) 5px rgba(156, 155, 155, 0.1);
-    --big-size: 2rem;
-    --medium-size: 1.6rem;
-    --normal-size: 1.1rem;
-    --small-size: 0.8rem;
+    color-scheme: dark;
+
+    --bg: #141518;
+    --surface: #1C1E22;
+    --surface-sunken: #141518;
+    --surface-raised: #2A2D33;
+    --surface-hover: #202328;
+    --table-head: #18191D;
+    --line: #2B2E34;
+    --line-strong: #31353B;
+
+    --text: #EDEEF0;
+    --text-soft: #C9CDD2;
+    --muted: #A0A6AE;
+
+    --accent: #C8F135;
+    --accent-hover: #D9F86A;
+    --accent-ink: #141518;
+    --accent-soft: #2E3A12;
+    --warning: #F5C451;
+    --warning-soft: #2A2512;
+    --danger: #D93036;
+    --danger-hover: #E5484D;
+    --danger-soft: #3B1D20;
+    --danger-text: #FF8F92;
+
+    --radius-sm: 10px;
+    --radius: 12px;
+    --radius-lg: 20px;
+    --radius-xl: 24px;
+
+    --font-sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-display: 'Space Grotesk', var(--font-sans);
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+    --shadow-dialog: 0 24px 64px rgba(0, 0, 0, 0.5);
 }
 
-* {
+*, *::before, *::after {
     box-sizing: border-box;
-    font-size: var(--normal-size);
 }
 
 html, body {
     margin: 0;
     padding: 0;
-    width: 100vw;
-    height: 100vh;
+}
+
+h1, h2, h3, p {
+    margin: 0;
+}
+
+input, button {
+    font: inherit;
+    color: inherit;
+}
+
+img, svg {
+    display: block;
 }

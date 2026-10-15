@@ -1,25 +1,35 @@
-const copyItem = async (event) => {
+const copyItem = async (button) => {
     try {
-        event.preventDefault();
-        const currentLabel = event.target.dataset.copyText;
-        let copyContent = event.target?.nextElementSibling?.href;
-        if (!copyContent) {
-            copyContent = event.target?.parentElement?.href;
-        }
+        await navigator.clipboard.writeText(button.dataset.copy);
 
-        await navigator.clipboard.writeText(copyContent);
-        
-        event.target.dataset.copyText = 'Copied !';
+        // Buttons with a text label display "Copied!", icon buttons a check mark
+        const label = button.querySelector('[data-copy-label]');
+        const use = button.querySelector('use');
+        const previousLabel = label?.textContent;
+        const previousIcon = use?.getAttribute('href');
+
+        if (label) {
+            label.textContent = 'Copied!';
+        }
+        use?.setAttribute('href', '#i-check');
+        button.classList.add('is-copied');
+
         setTimeout(() => {
-            event.target.dataset.copyText = currentLabel;
-        }, 1000);
+            if (label) {
+                label.textContent = previousLabel;
+            }
+            use?.setAttribute('href', previousIcon);
+            button.classList.remove('is-copied');
+        }, 1200);
     } catch (error) {
         console.error(error.message);
     }
 };
 
 document.addEventListener('click', event => {
-    if (true === event.target.classList.contains('copy')) {
-        copyItem(event);
+    const button = event.target.closest('[data-copy]');
+    if (button && button.dataset.copy) {
+        event.preventDefault();
+        copyItem(button);
     }
 });

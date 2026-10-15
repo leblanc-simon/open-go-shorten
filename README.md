@@ -6,7 +6,7 @@
 
 OpenGoShorten is a URL shortening service written in Go. It allows you to create short URLs for long ones, and it also provides a simple web interface to manage your shortened URLs.
 
-It was created as a test of an AI's ability to generate a codebase and a README for the associated codebase. The majority of the code and this README were written by the AI (https://chat.mistral.ai/).
+It was created as a test of an AI's ability to generate a codebase and a README for the associated codebase. The majority of the code and this README were written by the AI (https://chat.mistral.ai/). Later evolutions (QR codes, security review, web interface redesign) were made with Claude (https://claude.ai/).
 
 ## Features
 
@@ -149,6 +149,7 @@ Contributions are welcome! If you find a bug or have a feature request, please o
 
 * Simon Leblanc <contact@leblanc-simon.eu>
 * Mistral AI (https://chat.mistral.ai/)
+* Claude by Anthropic (https://claude.ai/)
 
 ## License
 

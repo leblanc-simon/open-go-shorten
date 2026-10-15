@@ -5,6 +5,7 @@
     <title>OpenGoShorten</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="theme-color" content="#141518">
     <link rel="stylesheet" href="/static/css/reset.css">
     <link rel="stylesheet" href="/static/css/app.css">
     <link rel="stylesheet" href="/static/css/table.css">
@@ -20,58 +21,180 @@
 </head>
 
 <body>
-    <header>
-        <h1>OpenGoShorten - It's your links !</h1>
-        <button id="logout">Log out</button>
+    <svg xmlns="http://www.w3.org/2000/svg" class="hidden" aria-hidden="true">
+        <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></symbol>
+        <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></symbol>
+        <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+        <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+        <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+        <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 3h7v7"/><path d="M10 14L21 3"/><path d="M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"/></symbol>
+        <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+        <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+        <symbol id="i-qrcode" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M21 14v.01"/><path d="M17 21h4v-4"/></symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/><path d="M9 7V4h6v3"/></symbol>
+        <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></symbol>
+        <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+        <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+        <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M10.6 5.1A10.5 10.5 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-2.6 3.5"/><path d="M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/></symbol>
+    </svg>
+
+    <header class="site-header">
+        <div class="brand">
+            <span class="brand-mark"><svg class="icon" aria-hidden="true"><use href="#i-link"></use></svg></span>
+            <span class="brand-text">
+                <span class="brand-name">OpenGoShorten</span>
+                <span class="brand-tagline">It's your links!</span>
+            </span>
+        </div>
+        <div id="session" class="session hidden">
+            <span class="user-chip">
+                <span id="user-initial" class="avatar" aria-hidden="true"></span>
+                <span id="user-name"></span>
+            </span>
+            <button id="logout" class="btn btn-ghost" type="button">
+                <svg class="icon" aria-hidden="true"><use href="#i-logout"></use></svg>
+                Log out
+            </button>
+        </div>
     </header>
+
     <main>
-        <article id="login-container">
-            <h2>Login</h2>
+        <article id="login-container" class="card login-card">
+            <div class="card-heading">
+                <h1 class="card-title">Sign in</h1>
+                <p class="subtitle">Manage your short links and QR codes.</p>
+            </div>
             <form id="login-form">
-                <label for="username">
-                    Username
-                    <input type="text" id="username" name="username" required>
-                </label>
-                <label for="password">
-                    Password
-                    <input type="password" id="password" name="password" required>
-                </label>
-                <button type="submit">Login</button>
+                <div class="field">
+                    <label for="username">Username</label>
+                    <div class="input-icon">
+                        <svg class="icon" aria-hidden="true"><use href="#i-user"></use></svg>
+                        <input class="input" type="text" id="username" name="username" autocomplete="username" required>
+                    </div>
+                </div>
+                <div class="field">
+                    <label for="password">Password</label>
+                    <div class="input-icon">
+                        <svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>
+                        <input class="input" type="password" id="password" name="password" autocomplete="current-password" required>
+                        <button id="toggle-password" class="btn-icon input-action" type="button" aria-label="Show password" aria-pressed="false">
+                            <svg class="icon" aria-hidden="true"><use href="#i-eye"></use></svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                    Sign in
+                    <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg>
+                </button>
             </form>
         </article>
 
-        <article id="shorten-container">
-            <h2>Shorten URL</h2>
-            <form id="shorten-form">
-                <label for="url">
-                    URL
-                    <input type="url" id="url" name="url" required>
-                </label>
-                <label for="expiration">
-                    Expiration
-                    <input type="date" id="expiration" name="expiration">
-                </label>
-                <button type="submit">Shorten</button>
+        <article id="shorten-container" class="card hidden">
+            <div class="card-heading">
+                <h1 class="card-title">Shorten a link</h1>
+                <p class="subtitle">Paste a long URL and, if needed, choose when the short link should stop working.</p>
+            </div>
+            <form id="shorten-form" class="shorten-form">
+                <div class="field field-url">
+                    <label for="url">Long URL</label>
+                    <div class="input-icon">
+                        <svg class="icon" aria-hidden="true"><use href="#i-link"></use></svg>
+                        <input class="input" type="url" id="url" name="url" placeholder="https://example.com/a/very/long/link" required>
+                    </div>
+                </div>
+                <div class="field field-date">
+                    <label for="expiration">Expiration <span class="optional">(optional)</span></label>
+                    <input class="input" type="date" id="expiration" name="expiration">
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    Shorten
+                    <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg>
+                </button>
             </form>
 
-            <p id="shortened-url"></p>
+            <section id="shortened-url" class="result hidden" aria-live="polite">
+                <div class="result-main">
+                    <p class="result-status">
+                        <svg class="icon" aria-hidden="true"><use href="#i-check"></use></svg>
+                        Your short link is ready
+                    </p>
+                    <a id="result-link" class="result-link" target="_blank" rel="noopener noreferrer"></a>
+                    <p class="result-destination">
+                        <svg class="icon" aria-hidden="true"><use href="#i-chevron"></use></svg>
+                        <span id="result-destination"></span>
+                    </p>
+                    <div class="result-actions">
+                        <button id="result-copy" class="btn btn-primary" type="button" data-copy="">
+                            <svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg>
+                            <span data-copy-label>Copy link</span>
+                        </button>
+                        <a id="result-open" class="btn btn-ghost" target="_blank" rel="noopener noreferrer">
+                            <svg class="icon" aria-hidden="true"><use href="#i-external"></use></svg>
+                            Open
+                        </a>
+                        <span id="result-expiration" class="chip chip-warning hidden">
+                            <svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg>
+                            <span></span>
+                        </span>
+                    </div>
+                </div>
+                <div class="result-qrcode">
+                    <div class="qrcode-frame">
+                        <img id="result-qrcode" alt="" width="156" height="156">
+                    </div>
+                    <div class="qrcode-downloads">
+                        <a id="result-png" class="btn btn-ghost btn-sm">
+                            <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
+                            PNG
+                        </a>
+                        <a id="result-svg" class="btn btn-ghost btn-sm">
+                            <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
+                            SVG
+                        </a>
+                    </div>
+                </div>
+            </section>
         </article>
 
-        <article id="urls-container">
-            <h2>Shortened URLs</h2>
-            <table id="urls-table" class="notloading">
-                <thead>
-                    <tr>
-                        <th>Short URL</th>
-                        <th>URL</th>
-                        <th>Expiration</th>
-                        <th>Total Visits</th>
-                        <th>Unique Visitors</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+        <article id="urls-container" class="card hidden">
+            <div class="list-header">
+                <div class="list-title">
+                    <h2 class="card-title">Your links</h2>
+                    <span id="urls-count" class="count">0</span>
+                </div>
+                <div class="search input-icon">
+                    <label for="search" class="visually-hidden">Search links</label>
+                    <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+                    <input class="input" type="search" id="search" placeholder="Search links">
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table id="urls-table" class="notloading">
+                    <colgroup>
+                        <col class="col-short">
+                        <col>
+                        <col class="col-expiration">
+                        <col class="col-number">
+                        <col class="col-number">
+                        <col class="col-actions">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th scope="col">Short link</th>
+                            <th scope="col">Destination</th>
+                            <th scope="col">Expires</th>
+                            <th scope="col" class="number">Visits</th>
+                            <th scope="col" class="number">Unique</th>
+                            <th scope="col"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <p id="urls-empty" class="empty hidden">No links yet. Shorten your first one above.</p>
+            </div>
         </article>
     </main>
 

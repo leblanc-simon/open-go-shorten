@@ -1,47 +1,72 @@
-const qrcodeUrl = (shortenUrl, format, download = false) =>
-    `/qrcode/${encodeURIComponent(shortenUrl)}/${format}${download ? '?download=1' : ''}`;
+const showQRCode = (shortURL) => {
+    const href = shortURLHref(shortURL);
 
-const showQRCode = (shortenUrl) => {
     const dialog = document.createElement('dialog');
     dialog.classList.add('qrcode-dialog');
+    dialog.setAttribute('aria-labelledby', 'qrcode-title');
     const article = document.createElement('article');
-    const main = document.createElement('main');
-    const footer = document.createElement('footer');
+
+    const header = document.createElement('header');
+    header.className = 'dialog-header';
+    const heading = document.createElement('div');
+    const title = document.createElement('h2');
+    title.id = 'qrcode-title';
+    title.textContent = 'QR code';
+    const subtitle = document.createElement('p');
+    subtitle.className = 'dialog-subtitle';
+    subtitle.textContent = 'Scan to open the short link';
+    heading.append(title, subtitle);
+
     const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'btn-icon';
+    close.setAttribute('aria-label', 'Close');
+    close.appendChild(svgIcon('close'));
+    close.addEventListener('click', () => dialog.close());
+    header.append(heading, close);
 
-    const title = document.createElement('strong');
-    title.textContent = `${window.location.origin}/${shortenUrl}`;
-
+    const frame = document.createElement('div');
+    frame.className = 'qrcode-frame';
     const img = document.createElement('img');
-    img.src = qrcodeUrl(shortenUrl, 'svg');
-    img.alt = `QR code of ${title.textContent}`;
+    img.src = qrcodeUrl(shortURL, 'svg');
+    img.alt = `QR code of ${href}`;
+    frame.appendChild(img);
 
-    const nav = document.createElement('nav');
-    for (const format of ['svg', 'png']) {
-        const link = document.createElement('a');
-        link.href = qrcodeUrl(shortenUrl, format, true);
-        link.download = `${shortenUrl}.${format}`;
-        link.textContent = format === 'png' ? 'Download PNG (512x512)' : 'Download SVG';
-        nav.appendChild(link);
+    const link = document.createElement('p');
+    link.className = 'qrcode-link';
+    link.append(...shortURLLabel(shortURL));
+
+    const actions = document.createElement('div');
+    actions.className = 'qrcode-actions';
+    for (const format of ['png', 'svg']) {
+        const download = document.createElement('a');
+        download.className = format === 'png' ? 'btn btn-primary' : 'btn btn-ghost';
+        download.href = qrcodeUrl(shortURL, format, true);
+        download.download = `${shortURL}.${format}`;
+        download.append(svgIcon('download'), format === 'png' ? 'Download PNG' : 'Download SVG');
+        if (format === 'png') {
+            download.title = '512x512 pixels';
+        }
+        actions.appendChild(download);
     }
 
-    main.append(title, img, nav);
-    article.appendChild(main);
-
-    close.textContent = 'Close';
-    close.addEventListener('click', () => dialog.remove());
-    dialog.addEventListener('close', () => dialog.remove());
-    footer.appendChild(close);
-    article.appendChild(footer);
-
+    article.append(header, frame, link, actions);
     dialog.appendChild(article);
+    dialog.addEventListener('close', () => dialog.remove());
+    dialog.addEventListener('click', (event) => {
+        // Click on the backdrop
+        if (event.target === dialog) {
+            dialog.close();
+        }
+    });
     document.body.appendChild(dialog);
     dialog.showModal();
 };
 
 document.addEventListener('click', event => {
-    if (true === event.target.classList.contains('qrcode')) {
+    const button = event.target.closest('[data-qrcode]');
+    if (button) {
         event.preventDefault();
-        showQRCode(event.target.dataset.qrcode);
+        showQRCode(button.dataset.qrcode);
     }
 });
